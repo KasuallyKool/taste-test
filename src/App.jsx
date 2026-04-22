@@ -7,6 +7,53 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// ── PIN (change this to whatever you like) ──
+const OWNER_PIN = "1721";
+
+// ── PIN MODAL ──
+function PinModal({ onSuccess, onClose }) {
+  const [pin, setPin] = useState("");
+  const [shake, setShake] = useState(false);
+
+  const handleSubmit = () => {
+    if (pin === OWNER_PIN) {
+      onSuccess();
+      onClose();
+    } else {
+      setShake(true);
+      setPin("");
+      setTimeout(() => setShake(false), 600);
+    }
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(40,28,10,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(4px)" }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: "#FFF8EE", borderRadius: 20, padding: "32px 28px", width: "100%", maxWidth: 320,
+        boxShadow: "0 24px 64px rgba(40,28,10,0.25)", border: "1px solid #E8D9C4", textAlign: "center",
+        animation: shake ? "shake 0.5s ease" : "none",
+      }}>
+        <style>{`@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }`}</style>
+        <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>🔐</div>
+        <h2 style={{ fontFamily: "'Caveat', cursive", fontSize: "1.7rem", fontWeight: 700, color: "#2C2416", marginBottom: 6 }}>Owner Access</h2>
+        <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "#9A7D50", marginBottom: 24 }}>Enter your PIN to unlock editing</p>
+        <input
+          type="password" inputMode="numeric" maxLength={6}
+          value={pin} onChange={e => setPin(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleSubmit()}
+          autoFocus
+          placeholder="••••"
+          style={{ width: "100%", padding: "12px", border: "2px solid #E8D9C4", borderRadius: 12, fontFamily: "'Caveat', cursive", fontSize: "1.6rem", textAlign: "center", letterSpacing: "0.4em", color: "#2C2416", background: "white", outline: "none", marginBottom: 16 }}
+        />
+        <button onClick={handleSubmit} style={{ width: "100%", background: "#E07A3A", color: "white", border: "none", borderRadius: 12, padding: "12px", fontFamily: "'Caveat', cursive", fontSize: "1.15rem", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 14px rgba(224,122,58,0.3)" }}>
+          Unlock 🔓
+        </button>
+        <button onClick={onClose} style={{ marginTop: 10, background: "transparent", border: "none", fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "#9A7D50", cursor: "pointer" }}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 // ── SEED DATA ──
 const SEED_RECIPES = [
   {
@@ -139,7 +186,7 @@ function Lightbox({ src, onClose }) {
 }
 
 // ── RECIPE CARD ──
-function RecipeCard({ recipe, onView, onEdit, onDelete }) {
+function RecipeCard({ recipe, onView, onEdit, onDelete, isOwner }) {
   const emoji = CATEGORY_EMOJI[recipe.category] || "🍳";
   return (
     <div onClick={() => onView(recipe)} style={{
@@ -172,9 +219,9 @@ function RecipeCard({ recipe, onView, onEdit, onDelete }) {
           {recipe.ingredients?.length > 0 && <span style={{ fontFamily: "'Caveat', cursive", fontSize: "0.95rem", color: "#9A7D50" }}>🧺 {recipe.ingredients.filter(i => i.name).length} items</span>}
         </div>
         <div onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 8, marginTop: 14, paddingTop: 14, borderTop: "1px solid #E8D9C4" }}>
-          <CardBtn onClick={() => onEdit(recipe)}>✏️ Edit</CardBtn>
+          {isOwner && <CardBtn onClick={() => onEdit(recipe)}>✏️ Edit</CardBtn>}
           <CardBtn primary onClick={() => onView(recipe)}>👀 View</CardBtn>
-          <CardBtn onClick={() => onDelete(recipe.id)} style={{ flex: "0 0 36px", color: "#C08060" }}>🗑</CardBtn>
+          {isOwner && <CardBtn onClick={() => onDelete(recipe.id)} style={{ flex: "0 0 36px", color: "#C08060" }}>🗑</CardBtn>}
         </div>
       </div>
     </div>
@@ -200,7 +247,7 @@ function CardBtn({ children, onClick, primary, style = {} }) {
 }
 
 // ── VIEW MODAL ──
-function ViewModal({ recipe, onClose, onEdit, onDelete, onLightbox }) {
+function ViewModal({ recipe, onClose, onEdit, onDelete, onLightbox, isOwner }) {
   if (!recipe) return null;
   const emoji = CATEGORY_EMOJI[recipe.category] || "🍳";
   return (
@@ -270,8 +317,8 @@ function ViewModal({ recipe, onClose, onEdit, onDelete, onLightbox }) {
         </>}
 
         <div style={{ display: "flex", gap: 10, marginTop: 22, paddingTop: 18, borderTop: "1px solid #E8D9C4" }}>
-          <CardBtn onClick={() => { onClose(); onEdit(recipe); }}>✏️ Edit Recipe</CardBtn>
-          <CardBtn onClick={() => { onClose(); onDelete(recipe.id); }} style={{ color: "#C08060" }}>🗑 Delete</CardBtn>
+          {isOwner && <CardBtn onClick={() => { onClose(); onEdit(recipe); }}>✏️ Edit Recipe</CardBtn>}
+          {isOwner && <CardBtn onClick={() => { onClose(); onDelete(recipe.id); }} style={{ color: "#C08060" }}>🗑 Delete</CardBtn>}
         </div>
       </div>
     </ModalShell>
@@ -501,6 +548,8 @@ export default function App() {
   const [showForm, setShowForm] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const [toast, setToast] = useState({ msg: "", visible: false });
+  const [isOwner, setIsOwner] = useState(false);
+  const [showPin, setShowPin] = useState(false);
 
   const showToast = (msg) => {
     setToast({ msg, visible: true });
@@ -560,9 +609,19 @@ export default function App() {
             <span style={{ fontFamily: "'Caveat', cursive", fontSize: "0.95rem", color: "#5C4A2A", display: "block", marginTop: -4 }}>a recipe repository</span>
           </div>
         </div>
-        <button onClick={() => { setEditRecipe(null); setShowForm(true); }} style={{ background: "#E07A3A", color: "white", border: "none", borderRadius: 24, padding: "10px 22px", fontFamily: "'Caveat', cursive", fontSize: "1.1rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 3px 10px rgba(224,122,58,0.25)" }}>
-          <span>＋</span> Add Recipe
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {isOwner && (
+            <button onClick={() => { setEditRecipe(null); setShowForm(true); }} style={{ background: "#E07A3A", color: "white", border: "none", borderRadius: 24, padding: "10px 22px", fontFamily: "'Caveat', cursive", fontSize: "1.1rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 3px 10px rgba(224,122,58,0.25)" }}>
+              <span>＋</span> Add Recipe
+            </button>
+          )}
+          <button
+            onClick={() => isOwner ? (setIsOwner(false), showToast("🔒 Editing locked")) : setShowPin(true)}
+            title={isOwner ? "Lock editing" : "Owner login"}
+            style={{ background: isOwner ? "#E8F5E9" : "#FEF6E4", border: `1.5px solid ${isOwner ? "#5A8A5E" : "#E8D9C4"}`, borderRadius: "50%", width: 42, height: 42, fontSize: "1.2rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>
+            {isOwner ? "🔓" : "🔒"}
+          </button>
+        </div>
       </header>
 
       {/* FILTER BAR */}
@@ -598,7 +657,7 @@ export default function App() {
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 26 }}>
             {filtered.map(r => (
-              <RecipeCard key={r.id} recipe={r} onView={setViewRecipe} onEdit={handleEdit} onDelete={handleDelete} />
+              <RecipeCard key={r.id} recipe={r} onView={setViewRecipe} onEdit={handleEdit} onDelete={handleDelete} isOwner={isOwner} />
             ))}
           </div>
         )}
@@ -606,10 +665,13 @@ export default function App() {
 
       {/* MODALS */}
       {viewRecipe && (
-        <ViewModal recipe={viewRecipe} onClose={() => setViewRecipe(null)} onEdit={r => { setViewRecipe(null); handleEdit(r); }} onDelete={id => { setViewRecipe(null); handleDelete(id); }} onLightbox={setLightboxSrc} />
+        <ViewModal recipe={viewRecipe} onClose={() => setViewRecipe(null)} onEdit={r => { setViewRecipe(null); handleEdit(r); }} onDelete={id => { setViewRecipe(null); handleDelete(id); }} onLightbox={setLightboxSrc} isOwner={isOwner} />
       )}
       {showForm && (
         <RecipeFormModal initial={editRecipe} onClose={() => { setShowForm(false); setEditRecipe(null); }} onSave={handleSave} />
+      )}
+      {showPin && (
+        <PinModal onSuccess={() => { setIsOwner(true); showToast("🔓 Editing unlocked!"); }} onClose={() => setShowPin(false)} />
       )}
 
       <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
