@@ -212,12 +212,6 @@ function RecipeCard({ recipe, onView, onEdit, onDelete, isOwner }) {
         ? <img src={recipe.images[0]} alt={recipe.name} style={{ width: "100%", height: 190, objectFit: "cover", display: "block" }} />
         : <div style={{ width: "100%", height: 190, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "4rem", background: "linear-gradient(135deg, #FDE8D5 0%, #FAF0DC 100%)" }}>{emoji}</div>
       }
-      <span style={{
-        position: "absolute", top: 14, right: 14, background: "white", borderRadius: 12,
-        padding: "4px 12px", fontFamily: "'Caveat', cursive", fontSize: "0.9rem",
-        color: "#E07A3A", fontWeight: 600, boxShadow: "0 2px 8px rgba(80,50,10,0.10)",
-      }}>{recipe.category}</span>
-
       <div style={{ padding: "18px 20px 20px" }}>
         <div style={{ fontFamily: "'Caveat', cursive", fontSize: "1.55rem", fontWeight: 700, color: "#2C2416", marginBottom: 6, lineHeight: 1.2 }}>{recipe.name}</div>
         <p style={{ fontSize: "0.83rem", color: "#5C4A2A", lineHeight: 1.5, marginBottom: 14 }}>
@@ -265,7 +259,6 @@ function ViewModal({ recipe, onClose, onEdit, onDelete, onLightbox, isOwner }) {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "24px 28px 0" }}>
         <div>
           <h2 style={{ fontFamily: "'Caveat', cursive", fontSize: "1.9rem", fontWeight: 700, color: "#2C2416" }}>{recipe.name}</h2>
-          <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "#E07A3A" }}>{emoji} {recipe.category}</p>
         </div>
         <CloseBtn onClose={onClose} />
       </div>
