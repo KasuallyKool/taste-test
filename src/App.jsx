@@ -138,12 +138,6 @@ const CATEGORY_EMOJI = {
   Drinks: "🥤",
 };
 
-const FILTERS = [
-  { label: "🌅 Breakfast", value: "Breakfast" },
-  { label: "☀️ Lunch", value: "Lunch" },
-  { label: "🌙 Dinner", value: "Dinner" },
-];
-
 const EMPTY_INGREDIENT = () => ({ id: Date.now() + Math.random(), qty: "", unit: "", name: "" });
 const EMPTY_STEP = () => ({ id: Date.now() + Math.random(), text: "" });
 
@@ -600,8 +594,7 @@ function GhostBtn({ children, onClick }) {
 // ── APP ──
 export default function App() {
   const [recipes, setRecipes] = useLocalStorage("tasteTestRecipes", SEED_RECIPES);
-  const [filter, setFilter] = useState("Breakfast");
-  const [search] = useState("");
+  const [search, setSearch] = useState("");
   const [viewRecipe, setViewRecipe] = useState(null);
   const [editRecipe, setEditRecipe] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -616,9 +609,7 @@ export default function App() {
   };
 
   const filtered = recipes.filter(r => {
-    const matchFilter = filter === "All" || r.category === filter;
-    const matchSearch = !search || r.name.toLowerCase().includes(search.toLowerCase()) || (r.desc || "").toLowerCase().includes(search.toLowerCase());
-    return matchFilter && matchSearch;
+    return !search || r.name.toLowerCase().includes(search.toLowerCase());
   });
 
   const handleSave = (recipe) => {
@@ -683,17 +674,30 @@ export default function App() {
         </div>
       </header>
 
-      {/* FILTER BAR */}
-      <div style={{ padding: "16px 32px", display: "flex", gap: 10, overflowX: "auto", background: "#FFF8EE", borderBottom: "1px solid #E8D9C4" }}>
-        {FILTERS.map(f => (
-          <button key={f.value} onClick={() => setFilter(f.value)} style={{
-            background: filter === f.value ? "#E07A3A" : "#FEF6E4",
-            border: `1.5px solid ${filter === f.value ? "#E07A3A" : "#E8D9C4"}`,
-            borderRadius: 20, padding: "6px 18px", fontFamily: "'Caveat', cursive",
-            fontSize: "1rem", color: filter === f.value ? "white" : "#5C4A2A",
-            cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.2s",
-          }}>{f.label}</button>
-        ))}
+      {/* SEARCH BAR */}
+      <div style={{ padding: "14px 32px", background: "#FFF8EE", borderBottom: "1px solid #E8D9C4" }}>
+        <div style={{ position: "relative", maxWidth: 480 }}>
+          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: "1.1rem", pointerEvents: "none" }}>🔍</span>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search recipes by name..."
+            style={{
+              width: "100%", padding: "10px 14px 10px 40px",
+              border: "1.5px solid #E8D9C4", borderRadius: 24,
+              fontFamily: "'Caveat', cursive", fontSize: "1.05rem", color: "#2C2416",
+              background: "white", outline: "none", boxSizing: "border-box",
+              boxShadow: "0 2px 8px rgba(80,50,10,0.07)",
+              transition: "border-color 0.2s, box-shadow 0.2s",
+            }}
+            onFocus={e => { e.target.style.borderColor = "#E07A3A"; e.target.style.boxShadow = "0 0 0 3px #FDE8D5"; }}
+            onBlur={e => { e.target.style.borderColor = "#E8D9C4"; e.target.style.boxShadow = "0 2px 8px rgba(80,50,10,0.07)"; }}
+          />
+          {search && (
+            <button onClick={() => setSearch("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "#E8D9C4", border: "none", borderRadius: "50%", width: 22, height: 22, fontSize: "0.75rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#5C4A2A" }}>✕</button>
+          )}
+        </div>
       </div>
 
       {/* MAIN */}
@@ -710,7 +714,7 @@ export default function App() {
               {recipes.length === 0 ? "Your recipe book is empty!" : "No recipes found"}
             </h2>
             <p style={{ color: "#9A7D50", fontSize: "0.9rem" }}>
-              {recipes.length === 0 ? 'Hit "+ Add Recipe" to start your collection.' : "Try a different search or filter."}
+              {recipes.length === 0 ? 'Hit "+ Add Recipe" to start your collection.' : "No recipes match your search."}
             </p>
           </div>
         ) : (
