@@ -343,10 +343,25 @@ function RecipeFormModal({ initial, onClose, onSave }) {
   const [images, setImages] = useState(initial?.images || []);
   const fileRef = useRef();
 
-  const handleImages = (e) => {
+const handleImages = (e) => {
     Array.from(e.target.files).forEach(file => {
       const reader = new FileReader();
-      reader.onload = ev => setImages(prev => [...prev, ev.target.result]);
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX = 1200;
+          let w = img.width, h = img.height;
+          if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+          else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL("image/jpeg", 0.75);
+          setImages(prev => [...prev, compressed]);
+        };
+        img.src = ev.target.result;
+      };
       reader.readAsDataURL(file);
     });
     e.target.value = "";
