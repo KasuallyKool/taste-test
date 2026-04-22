@@ -76,7 +76,6 @@ const CATEGORY_EMOJI = {
 };
 
 const FILTERS = [
-  { label: "🍽 All", value: "All" },
   { label: "🌅 Breakfast", value: "Breakfast" },
   { label: "☀️ Lunch", value: "Lunch" },
   { label: "🌙 Dinner", value: "Dinner" },
@@ -495,7 +494,7 @@ function GhostBtn({ children, onClick }) {
 // ── APP ──
 export default function App() {
   const [recipes, setRecipes] = useLocalStorage("tasteTestRecipes", SEED_RECIPES);
-  const [filter, setFilter] = useState("All");
+  const [filter, setFilter] = useState("Breakfast");
   const [search] = useState("");
   const [viewRecipe, setViewRecipe] = useState(null);
   const [editRecipe, setEditRecipe] = useState(null);
