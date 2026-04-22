@@ -80,9 +80,6 @@ const FILTERS = [
   { label: "🌅 Breakfast", value: "Breakfast" },
   { label: "☀️ Lunch", value: "Lunch" },
   { label: "🌙 Dinner", value: "Dinner" },
-  { label: "🍎 Snacks", value: "Snacks" },
-  { label: "🍰 Dessert", value: "Dessert" },
-  { label: "🥤 Drinks", value: "Drinks" },
 ];
 
 const EMPTY_INGREDIENT = () => ({ id: Date.now() + Math.random(), qty: "", unit: "", name: "" });
@@ -499,7 +496,7 @@ function GhostBtn({ children, onClick }) {
 export default function App() {
   const [recipes, setRecipes] = useLocalStorage("tasteTestRecipes", SEED_RECIPES);
   const [filter, setFilter] = useState("All");
-  const [search, setSearch] = useState("");
+  const [search] = useState("");
   const [viewRecipe, setViewRecipe] = useState(null);
   const [editRecipe, setEditRecipe] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -556,7 +553,7 @@ export default function App() {
       `}</style>
 
       {/* HEADER */}
-      <header style={{ background: "#FFF8EE", borderBottom: "2px solid #E8D9C4", padding: "18px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 16px rgba(80,50,10,0.10)" }}>
+      <header style={{ background: "#FFF8EE", borderBottom: "2px solid #E8D9C4", padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 16px rgba(80,50,10,0.10)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 44, height: 44, background: "#E07A3A", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🍳</div>
           <div>
@@ -564,15 +561,9 @@ export default function App() {
             <span style={{ fontFamily: "'Caveat', cursive", fontSize: "0.95rem", color: "#5C4A2A", display: "block", marginTop: -4 }}>a recipe repository</span>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", background: "#FEF6E4", border: "1.5px solid #E8D9C4", borderRadius: 24, padding: "8px 16px", gap: 8 }}>
-            <span>🔍</span>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="search recipes..." style={{ border: "none", background: "transparent", fontFamily: "'Caveat', cursive", fontSize: "1.05rem", color: "#2C2416", outline: "none", width: 180 }} />
-          </div>
-          <button onClick={() => { setEditRecipe(null); setShowForm(true); }} style={{ background: "#E07A3A", color: "white", border: "none", borderRadius: 24, padding: "10px 22px", fontFamily: "'Caveat', cursive", fontSize: "1.1rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 3px 10px rgba(224,122,58,0.25)" }}>
-            <span>＋</span> Add Recipe
-          </button>
-        </div>
+        <button onClick={() => { setEditRecipe(null); setShowForm(true); }} style={{ background: "#E07A3A", color: "white", border: "none", borderRadius: 24, padding: "10px 22px", fontFamily: "'Caveat', cursive", fontSize: "1.1rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 3px 10px rgba(224,122,58,0.25)" }}>
+          <span>＋</span> Add Recipe
+        </button>
       </header>
 
       {/* FILTER BAR */}
