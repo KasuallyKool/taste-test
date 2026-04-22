@@ -1,12 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 
-// ── SERVICE WORKER REGISTRATION ──
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  });
-}
-
 // ── SEED DATA ──
 const SEED_RECIPES = [
   {
