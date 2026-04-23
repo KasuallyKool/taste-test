@@ -1,4 +1,24 @@
 import { useState, useEffect, useRef } from "react";
+import { initializeApp } from "firebase/app";
+import {
+  getFirestore, collection, doc, onSnapshot,
+  setDoc, deleteDoc, query, orderBy
+} from "firebase/firestore";
+
+// ── FIREBASE CONFIG ──
+const firebaseConfig = {
+  apiKey: "AIzaSyAW_RATWc3bYiSwIiOsH0uYURq03YXsa0I",
+  authDomain: "taste-test-ba9cf.firebaseapp.com",
+  projectId: "taste-test-ba9cf",
+  storageBucket: "taste-test-ba9cf.firebasestorage.app",
+  messagingSenderId: "726986597944",
+  appId: "1:726986597944:web:aaf4a9e0e156597d32e8cd",
+  measurementId: "G-F2MY1KDHYN",
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+const recipesCol = collection(db, "recipes");
 
 // ── SERVICE WORKER REGISTRATION ──
 if ('serviceWorker' in navigator) {
@@ -7,7 +27,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ── PIN (change this to whatever you like) ──
+// ── PIN ──
 const OWNER_PIN = "1721";
 
 // ── IMGBB API KEY ──
@@ -26,51 +46,7 @@ async function uploadToImgbb(file) {
   return json.data.url;
 }
 
-// ── PIN MODAL ──
-function PinModal({ onSuccess, onClose }) {
-  const [pin, setPin] = useState("");
-  const [shake, setShake] = useState(false);
-
-  const handleSubmit = () => {
-    if (pin === OWNER_PIN) {
-      onSuccess();
-      onClose();
-    } else {
-      setShake(true);
-      setPin("");
-      setTimeout(() => setShake(false), 600);
-    }
-  };
-
-  return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(40,28,10,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(4px)" }}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: "#FFF8EE", borderRadius: 20, padding: "32px 28px", width: "100%", maxWidth: 320,
-        boxShadow: "0 24px 64px rgba(40,28,10,0.25)", border: "1px solid #E8D9C4", textAlign: "center",
-        animation: shake ? "shake 0.5s ease" : "none",
-      }}>
-        <style>{`@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }`}</style>
-        <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>🔐</div>
-        <h2 style={{ fontFamily: "'Caveat', cursive", fontSize: "1.7rem", fontWeight: 700, color: "#2C2416", marginBottom: 6 }}>Owner Access</h2>
-        <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "#9A7D50", marginBottom: 24 }}>Enter your PIN to unlock editing</p>
-        <input
-          type="password" inputMode="numeric" maxLength={6}
-          value={pin} onChange={e => setPin(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && handleSubmit()}
-          autoFocus
-          placeholder="••••"
-          style={{ width: "100%", padding: "12px", border: "2px solid #E8D9C4", borderRadius: 12, fontFamily: "'Caveat', cursive", fontSize: "1.6rem", textAlign: "center", letterSpacing: "0.4em", color: "#2C2416", background: "white", outline: "none", marginBottom: 16 }}
-        />
-        <button onClick={handleSubmit} style={{ width: "100%", background: "#E07A3A", color: "white", border: "none", borderRadius: 12, padding: "12px", fontFamily: "'Caveat', cursive", fontSize: "1.15rem", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 14px rgba(224,122,58,0.3)" }}>
-          Unlock 🔓
-        </button>
-        <button onClick={onClose} style={{ marginTop: 10, background: "transparent", border: "none", fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "#9A7D50", cursor: "pointer" }}>Cancel</button>
-      </div>
-    </div>
-  );
-}
-
-// ── SEED DATA ──
+// ── SEED DATA (written to Firestore once if collection is empty) ──
 const SEED_RECIPES = [
   {
     id: "seed1",
@@ -141,21 +117,6 @@ const CATEGORY_EMOJI = {
 const EMPTY_INGREDIENT = () => ({ id: Date.now() + Math.random(), qty: "", unit: "", name: "" });
 const EMPTY_STEP = () => ({ id: Date.now() + Math.random(), text: "" });
 
-function useLocalStorage(key, fallback) {
-  const [value, setValue] = useState(() => {
-    try {
-      const stored = localStorage.getItem(key);
-      return stored ? JSON.parse(stored) : fallback;
-    } catch {
-      return fallback;
-    }
-  });
-  useEffect(() => {
-    localStorage.setItem(key, JSON.stringify(value));
-  }, [key, value]);
-  return [value, setValue];
-}
-
 // ── TOAST ──
 function Toast({ message, visible }) {
   return (
@@ -191,6 +152,50 @@ function Lightbox({ src, onClose }) {
         maxWidth: "90vw", maxHeight: "85vh", borderRadius: 12,
         boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
       }} />
+    </div>
+  );
+}
+
+// ── PIN MODAL ──
+function PinModal({ onSuccess, onClose }) {
+  const [pin, setPin] = useState("");
+  const [shake, setShake] = useState(false);
+
+  const handleSubmit = () => {
+    if (pin === OWNER_PIN) {
+      onSuccess();
+      onClose();
+    } else {
+      setShake(true);
+      setPin("");
+      setTimeout(() => setShake(false), 600);
+    }
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(40,28,10,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, backdropFilter: "blur(4px)" }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: "#FFF8EE", borderRadius: 20, padding: "32px 28px", width: "100%", maxWidth: 320,
+        boxShadow: "0 24px 64px rgba(40,28,10,0.25)", border: "1px solid #E8D9C4", textAlign: "center",
+        animation: shake ? "shake 0.5s ease" : "none",
+      }}>
+        <style>{`@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }`}</style>
+        <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>🔐</div>
+        <h2 style={{ fontFamily: "'Caveat', cursive", fontSize: "1.7rem", fontWeight: 700, color: "#2C2416", marginBottom: 6 }}>Owner Access</h2>
+        <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "#9A7D50", marginBottom: 24 }}>Enter your PIN to unlock editing</p>
+        <input
+          type="password" inputMode="numeric" maxLength={6}
+          value={pin} onChange={e => setPin(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleSubmit()}
+          autoFocus
+          placeholder="••••"
+          style={{ width: "100%", padding: "12px", border: "2px solid #E8D9C4", borderRadius: 12, fontFamily: "'Caveat', cursive", fontSize: "1.6rem", textAlign: "center", letterSpacing: "0.4em", color: "#2C2416", background: "white", outline: "none", marginBottom: 16 }}
+        />
+        <button onClick={handleSubmit} style={{ width: "100%", background: "#E07A3A", color: "white", border: "none", borderRadius: 12, padding: "12px", fontFamily: "'Caveat', cursive", fontSize: "1.15rem", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 14px rgba(224,122,58,0.3)" }}>
+          Unlock 🔓
+        </button>
+        <button onClick={onClose} style={{ marginTop: 10, background: "transparent", border: "none", fontFamily: "'Caveat', cursive", fontSize: "1rem", color: "#9A7D50", cursor: "pointer" }}>Cancel</button>
+      </div>
     </div>
   );
 }
@@ -271,17 +276,17 @@ function ViewModal({ recipe, onClose, onEdit, onDelete, onLightbox, isOwner }) {
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
           {recipe.time && <MetaPill>⏱ {recipe.time}</MetaPill>}
           {recipe.servings && <MetaPill>👥 {recipe.servings} servings</MetaPill>}
-          {recipe.ingredients?.filter(i=>i.name).length > 0 && <MetaPill>🧺 {recipe.ingredients.filter(i=>i.name).length} ingredients</MetaPill>}
+          {recipe.ingredients?.filter(i => i.name).length > 0 && <MetaPill>🧺 {recipe.ingredients.filter(i => i.name).length} ingredients</MetaPill>}
           {recipe.steps?.length > 0 && <MetaPill>📋 {recipe.steps.length} steps</MetaPill>}
         </div>
 
         {recipe.desc && <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1.05rem", color: "#5C4A2A", marginBottom: 12, lineHeight: 1.6 }}>{recipe.desc}</p>}
 
-        {recipe.ingredients?.filter(i=>i.name).length > 0 && <>
+        {recipe.ingredients?.filter(i => i.name).length > 0 && <>
           <SectionTitle>🧺 Ingredients</SectionTitle>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <tbody>
-              {recipe.ingredients.filter(i=>i.name).map((ing, i) => (
+              {recipe.ingredients.filter(i => i.name).map((ing, i) => (
                 <tr key={i}>
                   <td style={{ padding: "7px 10px", borderBottom: "1px solid #E8D9C4", fontFamily: "'Caveat', cursive", fontSize: "1.05rem", color: "#5C4A2A", width: 130, fontWeight: 600 }}>{ing.qty} {ing.unit}</td>
                   <td style={{ padding: "7px 10px", borderBottom: "1px solid #E8D9C4", fontFamily: "'Caveat', cursive", fontSize: "1.05rem", color: "#2C2416" }}>{ing.name}</td>
@@ -348,27 +353,19 @@ function RecipeFormModal({ initial, onClose, onSave }) {
   const [uploadError, setUploadError] = useState("");
   const fileRef = useRef();
 
-  // ── IMGBB UPLOAD HANDLER (replaces base64 approach) ──
   const handleImages = async (e) => {
     const files = Array.from(e.target.files);
     e.target.value = "";
     if (!files.length) return;
-
     setUploadError("");
     setUploadingCount(files.length);
-
     const results = await Promise.allSettled(files.map(file => uploadToImgbb(file)));
-
     const uploaded = [];
     const failed = [];
     results.forEach((result, i) => {
-      if (result.status === "fulfilled") {
-        uploaded.push(result.value);
-      } else {
-        failed.push(files[i].name);
-      }
+      if (result.status === "fulfilled") uploaded.push(result.value);
+      else failed.push(files[i].name);
     });
-
     if (uploaded.length) setImages(prev => [...prev, ...uploaded]);
     if (failed.length) setUploadError(`⚠️ Failed to upload: ${failed.join(", ")}. Please try again.`);
     setUploadingCount(0);
@@ -406,7 +403,7 @@ function RecipeFormModal({ initial, onClose, onSave }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
           <FormGroup label="Category">
             <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
-              {["Dinner","Breakfast","Lunch","Snacks","Dessert","Drinks"].map(c => <option key={c}>{c}</option>)}
+              {["Dinner", "Breakfast", "Lunch", "Snacks", "Dessert", "Drinks"].map(c => <option key={c}>{c}</option>)}
             </select>
           </FormGroup>
           <FormGroup label="Prep + Cook Time">
@@ -421,36 +418,33 @@ function RecipeFormModal({ initial, onClose, onSave }) {
           <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="A brief note about this recipe..." style={{ ...inputStyle, minHeight: 80, resize: "vertical", lineHeight: 1.6 }} />
         </FormGroup>
 
-        {/* INGREDIENTS */}
         <FormGroup label="🧺 Ingredients">
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
             {ingredients.map((ing, i) => (
               <div key={ing.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input value={ing.qty} onChange={e => setIngredients(prev => prev.map((x,j) => j===i ? {...x, qty: e.target.value} : x))} placeholder="Qty" style={{ ...inputStyle, maxWidth: 80 }} />
-                <input value={ing.unit} onChange={e => setIngredients(prev => prev.map((x,j) => j===i ? {...x, unit: e.target.value} : x))} placeholder="Unit" style={{ ...inputStyle, maxWidth: 95 }} />
-                <input value={ing.name} onChange={e => setIngredients(prev => prev.map((x,j) => j===i ? {...x, name: e.target.value} : x))} placeholder="Ingredient name" style={{ ...inputStyle, flex: 1 }} />
-                <IconBtn onClick={() => setIngredients(prev => prev.length > 1 ? prev.filter((_,j)=>j!==i) : prev)}>✕</IconBtn>
+                <input value={ing.qty} onChange={e => setIngredients(prev => prev.map((x, j) => j === i ? { ...x, qty: e.target.value } : x))} placeholder="Qty" style={{ ...inputStyle, maxWidth: 80 }} />
+                <input value={ing.unit} onChange={e => setIngredients(prev => prev.map((x, j) => j === i ? { ...x, unit: e.target.value } : x))} placeholder="Unit" style={{ ...inputStyle, maxWidth: 95 }} />
+                <input value={ing.name} onChange={e => setIngredients(prev => prev.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} placeholder="Ingredient name" style={{ ...inputStyle, flex: 1 }} />
+                <IconBtn onClick={() => setIngredients(prev => prev.length > 1 ? prev.filter((_, j) => j !== i) : prev)}>✕</IconBtn>
               </div>
             ))}
           </div>
           <GhostBtn onClick={() => setIngredients(prev => [...prev, EMPTY_INGREDIENT()])}>＋ Add ingredient</GhostBtn>
         </FormGroup>
 
-        {/* STEPS */}
         <FormGroup label="📋 Step-by-Step Instructions">
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
             {steps.map((step, i) => (
               <div key={step.id} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                 <div style={{ width: 30, height: 30, background: "#E07A3A", color: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Caveat', cursive", fontSize: "1rem", fontWeight: 700, flexShrink: 0, marginTop: 8 }}>{i + 1}</div>
-                <textarea value={step.text} onChange={e => setSteps(prev => prev.map((x,j) => j===i ? {...x, text: e.target.value} : x))} placeholder="Describe this step..." style={{ ...inputStyle, flex: 1, minHeight: 60, resize: "vertical" }} />
-                <IconBtn onClick={() => setSteps(prev => prev.length > 1 ? prev.filter((_,j)=>j!==i) : prev)} style={{ marginTop: 8 }}>✕</IconBtn>
+                <textarea value={step.text} onChange={e => setSteps(prev => prev.map((x, j) => j === i ? { ...x, text: e.target.value } : x))} placeholder="Describe this step..." style={{ ...inputStyle, flex: 1, minHeight: 60, resize: "vertical" }} />
+                <IconBtn onClick={() => setSteps(prev => prev.length > 1 ? prev.filter((_, j) => j !== i) : prev)} style={{ marginTop: 8 }}>✕</IconBtn>
               </div>
             ))}
           </div>
           <GhostBtn onClick={() => setSteps(prev => [...prev, EMPTY_STEP()])}>＋ Add step</GhostBtn>
         </FormGroup>
 
-        {/* IMAGES — now uploads to imgbb */}
         <FormGroup label="📸 Photos">
           <div onClick={() => !uploadingCount && fileRef.current.click()} style={{
             border: "2px dashed #F5C59C", borderRadius: 14, padding: 28, textAlign: "center",
@@ -458,8 +452,8 @@ function RecipeFormModal({ initial, onClose, onSave }) {
             cursor: uploadingCount ? "not-allowed" : "pointer", transition: "all 0.2s",
             opacity: uploadingCount ? 0.7 : 1,
           }}
-            onMouseEnter={e => { if (!uploadingCount) { e.currentTarget.style.borderColor="#E07A3A"; e.currentTarget.style.background="#FDD8B5"; }}}
-            onMouseLeave={e => { e.currentTarget.style.borderColor="#F5C59C"; e.currentTarget.style.background=uploadingCount?"#FEF6E4":"#FDE8D5"; }}
+            onMouseEnter={e => { if (!uploadingCount) { e.currentTarget.style.borderColor = "#E07A3A"; e.currentTarget.style.background = "#FDD8B5"; } }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#F5C59C"; e.currentTarget.style.background = uploadingCount ? "#FEF6E4" : "#FDE8D5"; }}
           >
             <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleImages} style={{ display: "none" }} disabled={uploadingCount > 0} />
             {uploadingCount > 0 ? (
@@ -490,7 +484,7 @@ function RecipeFormModal({ initial, onClose, onSave }) {
               {images.map((src, i) => (
                 <div key={i} style={{ position: "relative" }}>
                   <img src={src} alt="preview" style={{ width: 90, height: 90, borderRadius: 10, objectFit: "cover", border: "2px solid #E8D9C4" }} />
-                  <button onClick={() => setImages(prev => prev.filter((_,j)=>j!==i))} style={{ position: "absolute", top: -6, right: -6, background: "#E07A3A", color: "white", border: "none", borderRadius: "50%", width: 22, height: 22, fontSize: "0.75rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                  <button onClick={() => setImages(prev => prev.filter((_, j) => j !== i))} style={{ position: "absolute", top: -6, right: -6, background: "#E07A3A", color: "white", border: "none", borderRadius: "50%", width: 22, height: 22, fontSize: "0.75rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                 </div>
               ))}
             </div>
@@ -586,7 +580,8 @@ function GhostBtn({ children, onClick }) {
 
 // ── APP ──
 export default function App() {
-  const [recipes, setRecipes] = useLocalStorage("tasteTestRecipes", SEED_RECIPES);
+  const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [viewRecipe, setViewRecipe] = useState(null);
   const [editRecipe, setEditRecipe] = useState(null);
@@ -601,29 +596,60 @@ export default function App() {
     setTimeout(() => setToast(t => ({ ...t, visible: false })), 2800);
   };
 
-  const filtered = recipes.filter(r => {
-    return !search || r.name.toLowerCase().includes(search.toLowerCase());
-  });
-
-  const handleSave = (recipe) => {
-    setRecipes(prev => {
-      const exists = prev.find(r => r.id === recipe.id);
-      if (exists) {
-        showToast("✅ Recipe updated!");
-        return prev.map(r => r.id === recipe.id ? recipe : r);
+  // ── REAL-TIME FIRESTORE LISTENER ──
+  useEffect(() => {
+    const q = query(recipesCol, orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q, async (snap) => {
+      if (snap.empty) {
+        // Seed Firestore on first load if empty
+        await Promise.all(SEED_RECIPES.map(r => setDoc(doc(db, "recipes", r.id), r)));
       } else {
-        showToast("🎉 Recipe saved!");
-        return [recipe, ...prev];
+        setRecipes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setLoading(false);
       }
+    }, (err) => {
+      console.error("Firestore error:", err);
+      setLoading(false);
     });
+    return () => unsub();
+  }, []);
+
+  // Keep viewRecipe in sync with live Firestore data
+  useEffect(() => {
+    if (viewRecipe) {
+      const updated = recipes.find(r => r.id === viewRecipe.id);
+      if (updated) setViewRecipe(updated);
+    }
+  }, [recipes]);
+
+  const filtered = recipes.filter(r =>
+    !search || r.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // ── FIRESTORE WRITE: SAVE ──
+  const handleSave = async (recipe) => {
+    try {
+      await setDoc(doc(db, "recipes", recipe.id), recipe);
+      const isEdit = recipes.some(r => r.id === recipe.id);
+      showToast(isEdit ? "✅ Recipe updated!" : "🎉 Recipe saved!");
+    } catch (e) {
+      showToast("❌ Save failed. Check connection.");
+      console.error(e);
+    }
     setShowForm(false);
     setEditRecipe(null);
   };
 
-  const handleDelete = (id) => {
+  // ── FIRESTORE WRITE: DELETE ──
+  const handleDelete = async (id) => {
     if (!window.confirm("Delete this recipe? This cannot be undone.")) return;
-    setRecipes(prev => prev.filter(r => r.id !== id));
-    showToast("🗑 Recipe deleted.");
+    try {
+      await deleteDoc(doc(db, "recipes", id));
+      showToast("🗑 Recipe deleted.");
+    } catch (e) {
+      showToast("❌ Delete failed. Check connection.");
+      console.error(e);
+    }
   };
 
   const handleEdit = (recipe) => {
@@ -700,7 +726,13 @@ export default function App() {
           <div style={{ flex: 1, height: 1.5, background: "#E8D9C4", borderRadius: 2 }} />
         </div>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "80px 20px" }}>
+            <div style={{ fontSize: "3rem", marginBottom: 16, animation: "spin 1.2s linear infinite", display: "inline-block" }}>🍳</div>
+            <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+            <p style={{ fontFamily: "'Caveat', cursive", fontSize: "1.4rem", color: "#9A7D50" }}>Loading recipes…</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "80px 20px" }}>
             <div style={{ fontSize: "5rem", marginBottom: 20 }}>🍽️</div>
             <h2 style={{ fontFamily: "'Caveat', cursive", fontSize: "2rem", color: "#5C4A2A", marginBottom: 10 }}>
